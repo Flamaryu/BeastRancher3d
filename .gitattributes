@@ -1,2 +1,13 @@
-# Normalize EOL for all files that Git considers text files.
+# Normalize EOL for text files
 * text=auto eol=lf
+
+# Explicit binary files to prevent corruption or text filter buffering
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.psd binary
+*.fbx binary
+*.FBX binary
+*.obj binary
+*.bin binary
+*.unitypackage binary
