@@ -11,3 +11,5 @@
 *.obj binary
 *.bin binary
 *.unitypackage binary
+*.glb binary
+*.gltf binary

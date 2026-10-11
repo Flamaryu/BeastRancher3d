@@ -3,3 +3,5 @@
 /android/
 *.translation
 .DS_Store
+desktop.ini
+Thumbs.db
