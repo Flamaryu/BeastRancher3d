@@ -1,0 +1,16 @@
+[gd_scene format=3 uid="uid://v60mv07g3g8k"]
+
+[ext_resource type="PackedScene" uid="uid://dxrodw8mkiib1" path="res://assets/models/Free Burrow Cute Series/FBX/Burrow.FBX" id="1_i1c0p"]
+
+[node name="Burrow" unique_id=1233557726 instance=ExtResource("1_i1c0p")]
+
+[node name="Rig" parent="." index="0" unique_id=1757185639]
+transform = Transform3D(1.2332292e-14, 2.8212995e-07, 0.99999994, 0.99999994, -4.3711385e-08, 0, 4.3711385e-08, 0.99999994, -2.8212995e-07, 0, 0, 0)
+
+[node name="Skeleton3D" parent="." index="1" unique_id=268749265]
+bones/0/rotation = Quaternion(0.50000006, 0.50000006, 0.49999994, 0.49999994)
+bones/1/rotation = Quaternion(0.16004908, 0.98618793, -0.038961664, -0.017310428)
+bones/3/rotation = Quaternion(-0.003430477, -0.004072132, 0.8024685, 0.5966708)
+bones/4/rotation = Quaternion(0.00023556208, 0.0017055463, 0.21817385, 0.97590846)
+bones/29/rotation = Quaternion(0.50000006, 0.50000006, 0.49999994, 0.49999994)
+bones/30/rotation = Quaternion(0.50000006, 0.50000006, 0.49999994, 0.49999994)

@@ -1,0 +1,81 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/entities/Pen3D.gd" id="1_pen_script"]
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_dirt"]
+albedo_color = Color(0.380392, 0.298039, 0.207843, 1)
+roughness = 0.9
+
+[sub_resource type="PlaneMesh" id="PlaneMesh_ground"]
+material = SubResource("StandardMaterial3D_dirt")
+size = Vector2(5.8, 5.8)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_fence"]
+albedo_color = Color(0.588235, 0.439216, 0.294118, 1)
+roughness = 0.8
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_h"]
+material = SubResource("StandardMaterial3D_fence")
+size = Vector3(6, 0.6, 0.15)
+
+[sub_resource type="BoxMesh" id="BoxMesh_wall_v"]
+material = SubResource("StandardMaterial3D_fence")
+size = Vector3(0.15, 0.6, 6)
+
+[sub_resource type="StandardMaterial3D" id="StandardMaterial3D_trough"]
+albedo_color = Color(0.494118, 0.345098, 0.219608, 1)
+roughness = 0.7
+
+[sub_resource type="BoxMesh" id="BoxMesh_trough"]
+material = SubResource("StandardMaterial3D_trough")
+size = Vector3(1.2, 0.4, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_trough"]
+size = Vector3(1.2, 0.5, 0.6)
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_boundary"]
+size = Vector3(6, 1.5, 6)
+
+[node name="Pen3D" type="Node3D"]
+script = ExtResource("1_pen_script")
+
+[node name="InteriorGround" type="MeshInstance3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.01, 3)
+mesh = SubResource("PlaneMesh_ground")
+
+[node name="FencePerimeter" type="Node3D" parent="."]
+
+[node name="WallNorth" type="MeshInstance3D" parent="FencePerimeter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.3, 0)
+mesh = SubResource("BoxMesh_wall_h")
+
+[node name="WallSouth" type="MeshInstance3D" parent="FencePerimeter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.3, 6)
+mesh = SubResource("BoxMesh_wall_h")
+
+[node name="WallWest" type="MeshInstance3D" parent="FencePerimeter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.3, 3)
+mesh = SubResource("BoxMesh_wall_v")
+
+[node name="WallEast" type="MeshInstance3D" parent="FencePerimeter"]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 6, 0.3, 3)
+mesh = SubResource("BoxMesh_wall_v")
+
+[node name="TroughArea3D" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.2, 0.5)
+collision_layer = 2
+collision_mask = 0
+
+[node name="TroughMesh" type="MeshInstance3D" parent="TroughArea3D"]
+mesh = SubResource("BoxMesh_trough")
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="TroughArea3D"]
+shape = SubResource("BoxShape3D_trough")
+
+[node name="BoundaryArea3D" type="Area3D" parent="."]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 3, 0.75, 3)
+collision_layer = 1
+collision_mask = 1
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="BoundaryArea3D"]
+shape = SubResource("BoxShape3D_boundary")

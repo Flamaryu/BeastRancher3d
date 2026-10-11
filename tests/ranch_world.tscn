@@ -1,0 +1,36 @@
+[gd_scene format=3 uid="uid://djrp81gp2y7ic"]
+
+[ext_resource type="PackedScene" uid="uid://d1372vm10m61t" path="res://tests/burrow_walk_forward_w_root.tscn" id="1_njcj0"]
+[ext_resource type="Script" uid="uid://bmnay2iwdqh5d" path="res://scripts/entities/BeastVisualTest.gd" id="2_eyn8n"]
+
+[sub_resource type="Environment" id="Environment_rvpm6"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_l3xjk"]
+
+[sub_resource type="BoxShape3D" id="BoxShape3D_l3xjk"]
+
+[node name="RanchWorld" type="Node3D" unique_id=1084449899]
+
+[node name="DirectionalLight3D" type="DirectionalLight3D" parent="." unique_id=288675170]
+shadow_enabled = true
+
+[node name="WorldEnvironment" type="WorldEnvironment" parent="." unique_id=573171568]
+environment = SubResource("Environment_rvpm6")
+
+[node name="Camera3D" type="Camera3D" parent="." unique_id=53009279]
+transform = Transform3D(1, 0, 0, 0, 0.81915206, 0.57357645, 0, -0.57357645, 0.81915206, 0, 10, 12)
+
+[node name="FloorMesh" type="MeshInstance3D" parent="." unique_id=606140012]
+transform = Transform3D(20, 0, 0, 0, 0.5, 0, 0, 0, 20, 0, 0, 0)
+mesh = SubResource("BoxMesh_l3xjk")
+
+[node name="StaticBody3D" type="StaticBody3D" parent="FloorMesh" unique_id=139080461]
+transform = Transform3D(20, 0, 0, 0, 0.5, 0, 0, 0, 20, 0, 0, 0)
+
+[node name="CollisionShape3D" type="CollisionShape3D" parent="FloorMesh/StaticBody3D" unique_id=499172233]
+transform = Transform3D(20, 0, 0, 0, 0.5, 0, 0, 0, 20, 0, 0, 0)
+shape = SubResource("BoxShape3D_l3xjk")
+
+[node name="Burrow_Walk Forward W Root" parent="." unique_id=875621188 instance=ExtResource("1_njcj0")]
+transform = Transform3D(1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0.5, 0)
+script = ExtResource("2_eyn8n")

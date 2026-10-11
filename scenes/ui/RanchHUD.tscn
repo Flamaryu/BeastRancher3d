@@ -1,0 +1,199 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scripts/ui/RanchHUD.gd" id="1_hud_script"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_drawer"]
+content_margin_left = 16.0
+content_margin_top = 16.0
+content_margin_right = 16.0
+content_margin_bottom = 16.0
+bg_color = Color(0.101961, 0.121569, 0.156863, 0.941176)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.243137, 0.301961, 0.380392, 1)
+corner_radius_top_left = 16
+corner_radius_top_right = 16
+corner_radius_bottom_right = 16
+corner_radius_bottom_left = 16
+shadow_color = Color(0, 0, 0, 0.392157)
+shadow_size = 12
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_satiety_fill"]
+bg_color = Color(0.960784, 0.580392, 0.203922, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hygiene_fill"]
+bg_color = Color(0.180392, 0.701961, 0.827451, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_temperament_fill"]
+bg_color = Color(0.792157, 0.352941, 0.87451, 1)
+corner_radius_top_left = 4
+corner_radius_top_right = 4
+corner_radius_bottom_right = 4
+corner_radius_bottom_left = 4
+
+[node name="RanchHUD" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_hud_script")
+
+[node name="InspectDrawer" type="PanelContainer" parent="."]
+custom_minimum_size = Vector2(360, 260)
+layout_mode = 1
+anchors_preset = 12
+anchor_top = 1.0
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 20.0
+offset_top = -280.0
+offset_right = -20.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 0
+theme_override_styles/panel = SubResource("StyleBoxFlat_drawer")
+
+[node name="VBox" type="VBoxContainer" parent="InspectDrawer"]
+layout_mode = 2
+theme_override_constants/separation = 8
+
+[node name="Header" type="HBoxContainer" parent="InspectDrawer/VBox"]
+layout_mode = 2
+
+[node name="TitleBox" type="VBoxContainer" parent="InspectDrawer/VBox/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="TitleLabel" type="Label" parent="InspectDrawer/VBox/Header/TitleBox"]
+layout_mode = 2
+theme_override_font_sizes/font_size = 20
+text = "Monster Nickname"
+
+[node name="SubtitleLabel" type="Label" parent="InspectDrawer/VBox/Header/TitleBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.611765, 0.654902, 0.72549, 1)
+theme_override_font_sizes/font_size = 13
+text = "Species • Rank • Stage"
+
+[node name="CloseButton" type="Button" parent="InspectDrawer/VBox/Header"]
+custom_minimum_size = Vector2(36, 36)
+layout_mode = 2
+size_flags_vertical = 0
+text = "✕"
+
+[node name="AppraisalLabel" type="Label" parent="InspectDrawer/VBox"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.984314, 0.768627, 0.231373, 1)
+theme_override_font_sizes/font_size = 15
+text = "Valuation: 0 Gold"
+
+[node name="HSeparator1" type="HSeparator" parent="InspectDrawer/VBox"]
+layout_mode = 2
+
+[node name="Meters" type="VBoxContainer" parent="InspectDrawer/VBox"]
+layout_mode = 2
+theme_override_constants/separation = 6
+
+[node name="SatietyRow" type="HBoxContainer" parent="InspectDrawer/VBox/Meters"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="InspectDrawer/VBox/Meters/SatietyRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Satiety"
+
+[node name="SatietyBar" type="ProgressBar" parent="InspectDrawer/VBox/Meters/SatietyRow"]
+custom_minimum_size = Vector2(120, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("StyleBoxFlat_satiety_fill")
+value = 50.0
+show_percentage = false
+
+[node name="SatietyValue" type="Label" parent="InspectDrawer/VBox/Meters/SatietyRow"]
+custom_minimum_size = Vector2(65, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "50 / 100"
+horizontal_alignment = 2
+
+[node name="HygieneRow" type="HBoxContainer" parent="InspectDrawer/VBox/Meters"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="InspectDrawer/VBox/Meters/HygieneRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Hygiene"
+
+[node name="HygieneBar" type="ProgressBar" parent="InspectDrawer/VBox/Meters/HygieneRow"]
+custom_minimum_size = Vector2(120, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("StyleBoxFlat_hygiene_fill")
+value = 50.0
+show_percentage = false
+
+[node name="HygieneValue" type="Label" parent="InspectDrawer/VBox/Meters/HygieneRow"]
+custom_minimum_size = Vector2(65, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "50 / 100"
+horizontal_alignment = 2
+
+[node name="TemperamentRow" type="HBoxContainer" parent="InspectDrawer/VBox/Meters"]
+layout_mode = 2
+
+[node name="Label" type="Label" parent="InspectDrawer/VBox/Meters/TemperamentRow"]
+custom_minimum_size = Vector2(100, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 13
+text = "Temperament"
+
+[node name="TemperamentBar" type="ProgressBar" parent="InspectDrawer/VBox/Meters/TemperamentRow"]
+custom_minimum_size = Vector2(120, 16)
+layout_mode = 2
+size_flags_horizontal = 3
+size_flags_vertical = 4
+theme_override_styles/fill = SubResource("StyleBoxFlat_temperament_fill")
+value = 50.0
+show_percentage = false
+
+[node name="TemperamentValue" type="Label" parent="InspectDrawer/VBox/Meters/TemperamentRow"]
+custom_minimum_size = Vector2(65, 0)
+layout_mode = 2
+theme_override_font_sizes/font_size = 12
+text = "50 / 100"
+horizontal_alignment = 2
+
+[node name="HSeparator2" type="HSeparator" parent="InspectDrawer/VBox"]
+layout_mode = 2
+
+[node name="FeedSection" type="VBoxContainer" parent="InspectDrawer/VBox"]
+layout_mode = 2
+
+[node name="FeedTitle" type="Label" parent="InspectDrawer/VBox/FeedSection"]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.784314, 0.815686, 0.862745, 1)
+theme_override_font_sizes/font_size = 13
+text = "Feed Crop:"
+
+[node name="FeedButtonsContainer" type="HBoxContainer" parent="InspectDrawer/VBox/FeedSection"]
+layout_mode = 2
+theme_override_constants/separation = 10
