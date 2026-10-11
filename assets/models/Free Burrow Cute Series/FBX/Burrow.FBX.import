@@ -3,13 +3,13 @@
 importer="scene"
 importer_version=1
 type="PackedScene"
-uid="uid://c5nkyy5d53l37"
-path="res://.godot/imported/Burrow@Walk Forward W Root.FBX-98c7b4c705bd0d99f983ee6985a142ea.scn"
+uid="uid://dxrodw8mkiib1"
+path="res://.godot/imported/Burrow.FBX-db6fe01e998ed9011ee3e169c7f6cfda.scn"
 
 [deps]
 
-source_file="res://Free Burrow Cute Series/FBX/Burrow@Walk Forward W Root.FBX"
-dest_files=["res://.godot/imported/Burrow@Walk Forward W Root.FBX-98c7b4c705bd0d99f983ee6985a142ea.scn"]
+source_file="res://assets/models/Free Burrow Cute Series/FBX/Burrow.FBX"
+dest_files=["res://.godot/imported/Burrow.FBX-db6fe01e998ed9011ee3e169c7f6cfda.scn"]
 
 [params]
 

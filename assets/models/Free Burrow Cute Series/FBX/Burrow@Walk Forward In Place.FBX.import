@@ -4,12 +4,12 @@ importer="scene"
 importer_version=1
 type="PackedScene"
 uid="uid://dckg2qot0qlau"
-path="res://.godot/imported/Burrow@Walk Forward In Place.FBX-c7a9618cfee63ade5e208c241584617e.scn"
+path="res://.godot/imported/Burrow@Walk Forward In Place.FBX-e4c2ddebc49e6ab09c42de93d5283bad.scn"
 
 [deps]
 
-source_file="res://Free Burrow Cute Series/FBX/Burrow@Walk Forward In Place.FBX"
-dest_files=["res://.godot/imported/Burrow@Walk Forward In Place.FBX-c7a9618cfee63ade5e208c241584617e.scn"]
+source_file="res://assets/models/Free Burrow Cute Series/FBX/Burrow@Walk Forward In Place.FBX"
+dest_files=["res://.godot/imported/Burrow@Walk Forward In Place.FBX-e4c2ddebc49e6ab09c42de93d5283bad.scn"]
 
 [params]
 
