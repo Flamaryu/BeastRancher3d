@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://hnhks0hym6qy"
+path="res://.godot/imported/Bush_Common.obj-0057d56936309de53b8af7b4f587b893.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Bush_Common.obj-0057d56936309de53b8af7b4f587b893.mesh"]
+
+source_file="res://assets/models/OBJ/Bush_Common.obj"
+dest_files=["res://.godot/imported/Bush_Common.obj-0057d56936309de53b8af7b4f587b893.mesh", "res://.godot/imported/Bush_Common.obj-0057d56936309de53b8af7b4f587b893.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false

@@ -1,0 +1,25 @@
+[remap]
+
+importer="wavefront_obj"
+importer_version=1
+type="Mesh"
+uid="uid://i22uge0yme4d"
+path="res://.godot/imported/Plant_7_Big.obj-5d7ee467c7d18f41934a5b21c7f897b2.mesh"
+
+[deps]
+
+files=["res://.godot/imported/Plant_7_Big.obj-5d7ee467c7d18f41934a5b21c7f897b2.mesh"]
+
+source_file="res://assets/models/OBJ/Plant_7_Big.obj"
+dest_files=["res://.godot/imported/Plant_7_Big.obj-5d7ee467c7d18f41934a5b21c7f897b2.mesh", "res://.godot/imported/Plant_7_Big.obj-5d7ee467c7d18f41934a5b21c7f897b2.mesh"]
+
+[params]
+
+generate_tangents=true
+generate_lods=true
+generate_shadow_mesh=true
+generate_lightmap_uv2=false
+generate_lightmap_uv2_texel_size=0.2
+scale_mesh=Vector3(1, 1, 1)
+offset_mesh=Vector3(0, 0, 0)
+force_disable_mesh_compression=false
