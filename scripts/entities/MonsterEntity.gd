@@ -56,7 +56,7 @@ var _tap_area: Area3D = null
 var current_state: State = State.IDLE
 var state_timer: float = 0.0
 var wander_target: Vector3 = Vector3.ZERO
-var eating_duration: float = 2.0
+var eating_duration: float = 1.2
 var cached_anim_player: AnimationPlayer = null
 var visual_controller: MonsterVisualController = null
 
@@ -72,9 +72,15 @@ func _ready() -> void:
 	_connect_event_bus()
 	if monster_data != null:
 		_apply_monster_data()
+	if pen_reference != null:
+		global_position = pen_reference.get_center() if pen_reference.has_method("get_center") else pen_reference.get_pen_world_bounds().get_center()
+		global_position.y = 0.0
 	_enter_state(State.IDLE)
 
 func _ensure_components() -> void:
+	collision_layer = 1
+	collision_mask = 1
+
 	# Ensure ModelContainer
 	if _model_container == null:
 		_model_container = get_node_or_null("ModelContainer")
@@ -157,6 +163,9 @@ func _apply_monster_data() -> void:
 	elif monster_data.current_species != null and not monster_data.current_species.model_path.is_empty():
 		_load_species_model(monster_data.current_species.model_path)
 
+	# Auto-play idle or current state animation immediately upon data application
+	play_animation("idle" if current_state == State.IDLE else ("walk" if current_state == State.WANDER else "eat"))
+
 ## Instances a species model into ModelContainer and discovers its AnimationPlayer.
 func _load_species_model(path: String) -> void:
 	if not ResourceLoader.exists(path):
@@ -174,6 +183,12 @@ func _load_species_model(path: String) -> void:
 	var instance: Node = scene_res.instantiate()
 	container.add_child(instance)
 	cached_anim_player = _find_animation_player(instance)
+	if cached_anim_player != null:
+		var idle_anim: String = _resolve_animation_name(cached_anim_player, "idle")
+		if not idle_anim.is_empty():
+			var anim_res: Animation = cached_anim_player.get_animation(idle_anim)
+			if anim_res != null:
+				anim_res.loop_mode = Animation.LOOP_LINEAR
 
 func _physics_process(delta: float) -> void:
 	if not is_inside_tree():
@@ -193,9 +208,16 @@ func _physics_process(delta: float) -> void:
 		State.EATING:
 			_process_eating_state(delta)
 
-	# Physical clamp within pen boundaries
-	if pen_reference != null and current_state != State.EATING:
-		global_position = pen_reference.get_clamped_position(global_position)
+	# Strict pen boundary hard-clamping after move_and_slide()
+	if pen_reference != null:
+		var clamped: Vector3 = pen_reference.get_clamped_position(global_position, 0.5)
+		global_position.x = clamped.x
+		global_position.z = clamped.z
+
+	# Y-Axis Safety Floor Lock: flat plane at y = 0.0
+	if global_position.y < 0.0:
+		global_position.y = 0.0
+		velocity.y = 0.0
 
 func _process_idle_state(delta: float) -> void:
 	velocity.x = move_toward(velocity.x, 0.0, move_speed * delta * 5.0)
@@ -244,12 +266,15 @@ func _process_eating_state(delta: float) -> void:
 
 func _pick_wander_target() -> void:
 	if pen_reference != null:
-		wander_target = pen_reference.get_random_point_in_pen()
+		wander_target = pen_reference.get_random_point_in_pen(0.5)
+		wander_target = pen_reference.get_clamped_position(wander_target, 0.5)
 	else:
 		# Fallback wander radius
 		var rand_offset: Vector3 = Vector3(randf_range(-2.0, 2.0), 0.0, randf_range(-2.0, 2.0))
 		var cur_pos: Vector3 = global_position if is_inside_tree() else position
 		wander_target = cur_pos + rand_offset
+
+	wander_target.y = 0.0
 
 func _enter_state(new_state: State) -> void:
 	current_state = new_state
@@ -262,11 +287,13 @@ func _enter_state(new_state: State) -> void:
 			state_timer = randf_range(3.0, 7.0)
 			play_animation("walk")
 		State.EATING:
+			velocity = Vector3.ZERO
 			state_timer = eating_duration
 			play_animation("eat")
 
 ## Executes the feeding sequence: stops movement, faces food/trough, and plays eating animation.
 func trigger_eating(food_pos: Vector3 = Vector3.ZERO) -> void:
+	velocity = Vector3.ZERO
 	if food_pos != Vector3.ZERO:
 		var cur_pos: Vector3 = global_position if is_inside_tree() else position
 		var dir_to_food: Vector3 = food_pos - cur_pos
@@ -318,37 +345,62 @@ func play_animation(anim_name: String) -> void:
 	if anim_player != null:
 		var resolved: String = _resolve_animation_name(anim_player, anim_name)
 		if not resolved.is_empty():
-			anim_player.play(resolved)
+			var anim_res: Animation = anim_player.get_animation(resolved)
+			if anim_res != null:
+				if anim_name.to_lower() in ["walk", "move"]:
+					anim_res.loop_mode = Animation.LOOP_LINEAR
+				else:
+					anim_res.loop_mode = Animation.LOOP_NONE
+
+			if anim_player.current_animation != resolved or not anim_player.is_playing():
+				anim_player.play(resolved)
 			played = true
+		else:
+			# No skeletal animation for this action (e.g. single-clip walk FBX during IDLE or EATING).
+			# Stop skeletal animation and seek to 0.0 so legs freeze at resting pose.
+			if anim_player.is_playing():
+				anim_player.seek(0.0, true)
+				anim_player.stop()
 
 	if not played:
 		_play_procedural_fallback(anim_name)
+	else:
+		# Skeletal clip playing: kill any procedural tween and restore base transform
+		if procedural_tween != null and procedural_tween.is_valid():
+			procedural_tween.kill()
+		if model_container != null:
+			model_container.position = Vector3.ZERO
+			model_container.rotation = Vector3.ZERO
+			model_container.scale = Vector3.ONE
 
 func _resolve_animation_name(player: AnimationPlayer, requested: String) -> String:
 	var list: PackedStringArray = player.get_animation_list()
 	if list.is_empty():
 		return ""
 
-	var lower_req: String = requested.to_lower()
+	var lower_req: String = requested.to_lower().strip_edges()
 
 	# Exact match
 	for anim in list:
 		if anim.to_lower() == lower_req:
 			return anim
 
-	# Substring match (e.g., "walk" matching "Burrow@Walk Forward In Place" or "Take 001")
+	# Substring match (e.g., "walk" matching "Burrow@Walk Forward In Place")
 	for anim in list:
 		var lower_anim: String = anim.to_lower()
-		if lower_req == "walk" and ("walk" in lower_anim or "run" in lower_anim):
+		if (lower_req == "walk" or lower_req == "move") and ("walk" in lower_anim or "run" in lower_anim or "move" in lower_anim):
 			return anim
 		elif lower_req == "idle" and ("idle" in lower_anim or "stand" in lower_anim):
 			return anim
-		elif lower_req == "eat" and ("eat" in lower_anim or "chew" in lower_anim or "attack" in lower_anim):
+		elif lower_req == "eat" and ("eat" in lower_anim or "chew" in lower_anim or "bite" in lower_anim or "attack" in lower_anim):
 			return anim
 
-	# Default fallback to first animation if idle or walk
-	if lower_req in ["idle", "walk"]:
-		return list[0]
+	# Restrict the "Take 001" fallback to movement ("walk" / "move") ONLY.
+	# Do NOT fall back to "Take 001" for "idle" or "eat".
+	if lower_req == "walk" or lower_req == "move":
+		for anim in list:
+			if anim == "Take 001" or anim.to_lower() == "take 001":
+				return anim
 
 	return ""
 
@@ -361,22 +413,39 @@ func _play_procedural_fallback(anim_type: String) -> void:
 	if procedural_tween != null and procedural_tween.is_valid():
 		procedural_tween.kill()
 
+	container.position = Vector3.ZERO
+	container.rotation = Vector3.ZERO
+	container.scale = Vector3.ONE
+
 	procedural_tween = create_tween()
 	match anim_type.to_lower():
 		"eat":
-			procedural_tween.tween_property(container, "rotation:x", deg_to_rad(20.0), 0.2)
-			procedural_tween.tween_property(container, "rotation:x", deg_to_rad(-10.0), 0.2)
-			procedural_tween.tween_property(container, "rotation:x", 0.0, 0.2)
-			procedural_tween.set_loops(3)
+			# Clear 3-bounce chomp / happy hop Tween over 1.0s (each bounce ~0.33s)
+			for i in range(3):
+				# 1. Chomp forward & squash down
+				procedural_tween.tween_property(container, "rotation:x", deg_to_rad(16.0), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				procedural_tween.parallel().tween_property(container, "scale", Vector3(1.14, 0.86, 1.14), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				procedural_tween.parallel().tween_property(container, "position:y", 0.0, 0.12)
+
+				# 2. Happy hop up in the air
+				procedural_tween.tween_property(container, "position:y", 0.20, 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				procedural_tween.parallel().tween_property(container, "rotation:x", deg_to_rad(-6.0), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+				procedural_tween.parallel().tween_property(container, "scale", Vector3(0.92, 1.12, 0.92), 0.12).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+
+				# 3. Land cleanly back on the ground
+				procedural_tween.tween_property(container, "position:y", 0.0, 0.09).set_trans(Tween.TRANS_BOUNCE).set_ease(Tween.EASE_OUT)
+				procedural_tween.parallel().tween_property(container, "rotation:x", 0.0, 0.09)
+				procedural_tween.parallel().tween_property(container, "scale", Vector3.ONE, 0.09)
 		"walk":
 			procedural_tween.tween_property(container, "rotation:z", deg_to_rad(6.0), 0.2)
 			procedural_tween.tween_property(container, "rotation:z", deg_to_rad(-6.0), 0.2)
 			procedural_tween.tween_property(container, "rotation:z", 0.0, 0.1)
 			procedural_tween.set_loops()
 		"idle":
-			procedural_tween.tween_property(container, "scale", Vector3(1.02, 0.97, 1.02), 1.2)
-			procedural_tween.tween_property(container, "scale", Vector3(0.98, 1.03, 0.98), 1.2)
-			procedural_tween.tween_property(container, "scale", Vector3.ONE, 0.6)
+			# Gentle breathing scale tween while idle
+			procedural_tween.tween_property(container, "scale", Vector3(1.03, 0.97, 1.03), 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			procedural_tween.tween_property(container, "scale", Vector3(0.97, 1.03, 0.97), 0.9).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+			procedural_tween.tween_property(container, "scale", Vector3.ONE, 0.4).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 			procedural_tween.set_loops()
 
 func _get_or_find_anim_player() -> AnimationPlayer:

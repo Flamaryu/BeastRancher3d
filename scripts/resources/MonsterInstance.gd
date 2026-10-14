@@ -90,10 +90,49 @@ func initialize_species_data(species: SpeciesData, p_beast_id: String = "", p_ni
 		appraisal_value = 0
 
 ## Calculates economic market valuation reflecting species tier, pedigree, husbandry, traits, and certification.
+## Phase 4A Unified Appraisal Formula:
+## Final Sale Value = ((Base Value * Form Multiplier * Pedigree Multiplier) + Trait Value Sum) * (1.0 + Husbandry Bonus) * Certification Multiplier
 func calculate_appraisal_value() -> int:
 	if species_data != null:
-		var mult: float = species_data.get_form_multiplier(current_form_index)
-		appraisal_value = int(round(float(species_data.base_value) * mult))
+		var base_val: float = float(species_data.base_value)
+		var form_mult: float = species_data.get_form_multiplier(current_form_index)
+
+		# Pedigree Rank Multiplier (F to S)
+		var pedigree_mult: float = 1.0
+		match pedigree_rank.to_upper():
+			"S": pedigree_mult = 3.0
+			"A": pedigree_mult = 2.2
+			"B": pedigree_mult = 1.6
+			"C": pedigree_mult = 1.0
+			"D": pedigree_mult = 0.7
+			"E": pedigree_mult = 0.5
+			"F": pedigree_mult = 0.3
+			_: pedigree_mult = 1.0
+
+		# Trait Value Sum ("Berserk_Rush" = 300, standard traits = 75)
+		var trait_sum: float = 0.0
+		for gene in gene_slots:
+			if gene == "Berserk_Rush":
+				trait_sum += 300.0
+			else:
+				trait_sum += 75.0
+
+		# Husbandry Bonus (based on average satiety, hygiene, temperament)
+		var husbandry_avg: float = float(temperament + hygiene + satiety) / 300.0
+		var husbandry_bonus: float = husbandry_avg * 0.20
+
+		# Certification Multiplier
+		var cert_mult: float = 1.0
+		match certification_grade.to_lower():
+			"gold", "master": cert_mult = 2.00
+			"silver", "elite": cert_mult = 1.50
+			"bronze", "standard": cert_mult = 1.25
+			_: cert_mult = 1.00
+
+		var base_product: float = base_val * form_mult * pedigree_mult
+		var subtotal: float = base_product + trait_sum
+		var final_value: float = subtotal * (1.0 + husbandry_bonus) * cert_mult
+		appraisal_value = maxi(1, int(round(final_value)))
 		return appraisal_value
 
 	if current_species == null:
@@ -392,4 +431,7 @@ func _notify_beast_evolved(new_species_id: String) -> void:
 func _get_event_bus() -> Node:
 	if is_instance_valid(EventBusScript.instance):
 		return EventBusScript.instance
+	var tree: SceneTree = Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null and tree.root.has_node("EventBus"):
+		return tree.root.get_node("EventBus")
 	return null

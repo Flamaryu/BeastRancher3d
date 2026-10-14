@@ -21,12 +21,14 @@ const GridManagerScript = preload("res://scripts/core/GridManager.gd")
 @onready var boundary_area: Area3D = get_node_or_null("BoundaryArea3D")
 
 func _enter_tree() -> void:
-	register_with_grid_manager()
-	_update_transform_from_grid()
+	if _get_grid_manager() != null:
+		register_with_grid_manager()
+		_update_transform_from_grid()
 
 func _ready() -> void:
-	register_with_grid_manager()
-	_update_transform_from_grid()
+	if _get_grid_manager() != null:
+		register_with_grid_manager()
+		_update_transform_from_grid()
 
 ## Registers all discrete grid cells covered by this pen with the GridManager.
 func register_with_grid_manager() -> void:
@@ -42,6 +44,8 @@ func register_with_grid_manager() -> void:
 ## Aligns root Node3D position to match grid_origin world coordinates.
 func _update_transform_from_grid() -> void:
 	var grid: GridManager = _get_grid_manager()
+	if grid == null:
+		return
 	var effective_cell_size: float = grid.cell_size if grid != null else cell_size
 	position = Vector3(float(grid_origin.x) * effective_cell_size, 0.0, float(grid_origin.y) * effective_cell_size)
 
@@ -53,23 +57,51 @@ func get_pen_world_bounds() -> AABB:
 	var size_3d: Vector3 = Vector3(float(pen_size.x) * effective_cell_size, 3.0, float(pen_size.y) * effective_cell_size)
 	return AABB(origin_pos, size_3d)
 
+## Returns the center of the pen at ground level (y = 0.0).
+func get_center() -> Vector3:
+	var bounds: AABB = get_pen_world_bounds()
+	return Vector3(bounds.position.x + (bounds.size.x * 0.5), 0.0, bounds.position.z + (bounds.size.z * 0.5))
+
 ## Returns a random reachable 3D position inside the pen with padding from the fence edges.
-func get_random_point_in_pen(padding: float = 0.6) -> Vector3:
+func get_random_point_in_pen(padding: float = 0.5) -> Vector3:
 	var bounds: AABB = get_pen_world_bounds()
 	var min_x: float = bounds.position.x + padding
 	var max_x: float = bounds.position.x + bounds.size.x - padding
 	var min_z: float = bounds.position.z + padding
 	var max_z: float = bounds.position.z + bounds.size.z - padding
 
+	if min_x > max_x:
+		var mid_x: float = bounds.position.x + bounds.size.x * 0.5
+		min_x = mid_x
+		max_x = mid_x
+	if min_z > max_z:
+		var mid_z: float = bounds.position.z + bounds.size.z * 0.5
+		min_z = mid_z
+		max_z = mid_z
+
 	var rx: float = randf_range(min_x, max_x)
 	var rz: float = randf_range(min_z, max_z)
-	return Vector3(rx, 0.0, rz)
+	return Vector3(clampf(rx, min_x, max_x), 0.0, clampf(rz, min_z, max_z))
 
 ## Clamps any 3D coordinate to remain strictly inside the physical perimeter of the pen.
 func get_clamped_position(target_pos: Vector3, padding: float = 0.5) -> Vector3:
 	var bounds: AABB = get_pen_world_bounds()
-	var clamped_x: float = clampf(target_pos.x, bounds.position.x + padding, bounds.position.x + bounds.size.x - padding)
-	var clamped_z: float = clampf(target_pos.z, bounds.position.z + padding, bounds.position.z + bounds.size.z - padding)
+	var min_x: float = bounds.position.x + padding
+	var max_x: float = bounds.position.x + bounds.size.x - padding
+	var min_z: float = bounds.position.z + padding
+	var max_z: float = bounds.position.z + bounds.size.z - padding
+
+	if min_x > max_x:
+		var mid_x: float = bounds.position.x + bounds.size.x * 0.5
+		min_x = mid_x
+		max_x = mid_x
+	if min_z > max_z:
+		var mid_z: float = bounds.position.z + bounds.size.z * 0.5
+		min_z = mid_z
+		max_z = mid_z
+
+	var clamped_x: float = clampf(target_pos.x, min_x, max_x)
+	var clamped_z: float = clampf(target_pos.z, min_z, max_z)
 	return Vector3(clamped_x, target_pos.y, clamped_z)
 
 ## Returns true if the given world position falls inside the pen.

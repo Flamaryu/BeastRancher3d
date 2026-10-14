@@ -21,6 +21,16 @@ signal feed_requested(monster_data: MonsterInstance, crop: CropData)
 # --- Spatial Grid & Farm Signals ---
 signal cell_state_changed(grid_pos: Vector2i, cell_type: int, occupant_id: String)
 
+# --- Store & License Signals ---
+signal license_gate_triggered(feature_name: String)
+
+# --- Sparring & Trial Signals ---
+signal sparring_completed(beast_id: String, success: bool, trial_tier: String, power_score: int)
+
+# --- Economy & Contract Signals ---
+signal contract_fulfilled(contract_id: String, beast_id: String, payout: int)
+signal beast_liquidated(beast_id: String, scrap_payout: int)
+
 static var instance: Node = null
 
 func _init() -> void:

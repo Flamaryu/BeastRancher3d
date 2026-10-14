@@ -99,13 +99,25 @@ func resolve_animation(action_category: String) -> String:
 	if anim_list.is_empty():
 		return ""
 
+	# Global Root-Motion Exclusion: Meshtint models include "with root motion" variants.
+	# Any animation containing "root motion" or "w root" is globally rejected across ALL categories.
+	var clean_anims: Array[String] = []
+	for anim in anim_list:
+		var l_anim: String = anim.to_lower()
+		if "root motion" in l_anim or "w root" in l_anim:
+			continue
+		clean_anims.append(anim)
+
+	if clean_anims.is_empty():
+		return ""
+
 	var cat: String = action_category.to_lower().strip_edges()
 
 	match cat:
 		"spawn":
 			# Matches ["spawn to idle", "spawn"]
 			for target in ["spawn to idle", "spawn"]:
-				for anim in anim_list:
+				for anim in clean_anims:
 					var l_anim: String = anim.to_lower()
 					if target in l_anim:
 						return anim
@@ -114,12 +126,9 @@ func resolve_animation(action_category: String) -> String:
 			# Matches ["idle", "look around"], strictly excluding "spawn" and "rest to idle"
 			var idle_candidates: Array[String] = []
 			var look_candidates: Array[String] = []
-			for anim in anim_list:
+			for anim in clean_anims:
 				var l_anim: String = anim.to_lower()
-				# Exclude clips containing spawn, rest to idle, or root motion
 				if "spawn" in l_anim or "rest to idle" in l_anim:
-					continue
-				if "root motion" in l_anim or "w root" in l_anim:
 					continue
 
 				if "idle" in l_anim:
@@ -133,18 +142,12 @@ func resolve_animation(action_category: String) -> String:
 				return look_candidates[0]
 
 		"move", "walk", "run":
-			# Meshtint models include both "in place" and "with root motion" clips.
-			# MUST explicitly reject any animation name containing "root motion".
-			# Prioritize "in place" clips first.
+			# Prioritize "in place" clips over generic walk/run
 			var in_place_candidates: Array[String] = []
 			var generic_move_candidates: Array[String] = []
 
-			for anim in anim_list:
+			for anim in clean_anims:
 				var l_anim: String = anim.to_lower()
-				# Explicit rejection of root motion
-				if "root motion" in l_anim or "w root" in l_anim:
-					continue
-
 				if "in place" in l_anim:
 					in_place_candidates.append(anim)
 				elif "walk" in l_anim or "run" in l_anim or "fly forward" in l_anim or "move" in l_anim:
@@ -155,63 +158,80 @@ func resolve_animation(action_category: String) -> String:
 			if not generic_move_candidates.is_empty():
 				return generic_move_candidates[0]
 
+		"dodge":
+			# Matches ["dodge right", "dodge left", "dodge"]
+			for target in ["dodge right", "dodge left", "dodge"]:
+				for anim in clean_anims:
+					var l_anim: String = anim.to_lower()
+					if target in l_anim:
+						return anim
+
 		"eat":
 			# Feeding action fallback: ["eat", "head attack", "punch attack", "bite", "cast spell"]
 			for target in ["eat", "bite", "head attack", "punch attack", "cast spell"]:
-				for anim in anim_list:
+				for anim in clean_anims:
 					var l_anim: String = anim.to_lower()
-					if "root motion" in l_anim or "w root" in l_anim:
-						continue
 					if target in l_anim:
 						return anim
 
 		"rest":
 			# Matches ["rest"], strictly excluding "rest to idle" and "spawn to rest"
-			for anim in anim_list:
+			for anim in clean_anims:
 				var l_anim: String = anim.to_lower()
 				if "rest to idle" in l_anim or "spawn to rest" in l_anim:
-					continue
-				if "root motion" in l_anim or "w root" in l_anim:
 					continue
 				if "rest" in l_anim:
 					return anim
 
 		"attack":
-			# Available attack/spell clips: ["attack", "spell", "blow petals"]
-			for target in ["attack", "spell", "blow petals"]:
-				for anim in anim_list:
+			# Available attack/spell clips: prefer "in place" attack clips first
+			var in_place_attacks: Array[String] = []
+			var standard_attacks: Array[String] = []
+			for target in ["attack", "spell", "blow petals", "smash", "punch", "bite", "strike"]:
+				for anim in clean_anims:
 					var l_anim: String = anim.to_lower()
-					if "root motion" in l_anim or "w root" in l_anim:
-						continue
 					if target in l_anim:
-						return anim
+						if "in place" in l_anim:
+							in_place_attacks.append(anim)
+						else:
+							standard_attacks.append(anim)
+			if not in_place_attacks.is_empty():
+				return in_place_attacks[0]
+			if not standard_attacks.is_empty():
+				return standard_attacks[0]
 
 		"damage", "hit":
 			# Matches ["take damage", "hit", "damage"]
 			for target in ["take damage", "hit", "damage"]:
-				for anim in anim_list:
+				for anim in clean_anims:
 					var l_anim: String = anim.to_lower()
-					if "root motion" in l_anim or "w root" in l_anim:
-						continue
 					if target in l_anim:
 						return anim
 
 		"die", "death":
 			# Matches ["die", "death"]
 			for target in ["die", "death"]:
-				for anim in anim_list:
+				for anim in clean_anims:
 					var l_anim: String = anim.to_lower()
 					if target in l_anim:
 						return anim
 
 		_:
-			# General fallback: substring match ignoring root motion
-			for anim in anim_list:
+			# General fallback: check "in place" first, then standard substring
+			for anim in clean_anims:
 				var l_anim: String = anim.to_lower()
-				if "root motion" in l_anim or "w root" in l_anim:
-					continue
+				if cat in l_anim and "in place" in l_anim:
+					return anim
+			for anim in clean_anims:
+				var l_anim: String = anim.to_lower()
 				if cat in l_anim:
 					return anim
+
+	# Safe fallback to "Take 001" ONLY for locomotion ("move", "walk", "run")
+	if cat in ["move", "walk", "run"]:
+		for anim in anim_list:
+			if anim == "Take 001" or anim.to_lower() == "take 001":
+				return anim
 
 	return ""
 
@@ -222,16 +242,27 @@ func play_smart_animation(action_category: String) -> void:
 		return
 
 	var resolved_clip: String = resolve_animation(action_category)
-	if resolved_clip.is_empty():
-		return
+	if not resolved_clip.is_empty():
+		var anim_res: Animation = cached_anim_player.get_animation(resolved_clip)
+		if anim_res != null:
+			if action_category.to_lower() in ["move", "walk", "run", "idle"]:
+				anim_res.loop_mode = Animation.LOOP_LINEAR
+			else:
+				anim_res.loop_mode = Animation.LOOP_NONE
 
-	cached_anim_player.play(resolved_clip)
+		if cached_anim_player.current_animation != resolved_clip or not cached_anim_player.is_playing():
+			cached_anim_player.play(resolved_clip)
 
-	# When playing spawn, automatically queue idle if available
-	if action_category.to_lower() == "spawn":
-		var idle_clip: String = resolve_animation("idle")
-		if not idle_clip.is_empty() and idle_clip != resolved_clip:
-			cached_anim_player.queue(idle_clip)
+		# When playing spawn, automatically queue idle if available
+		if action_category.to_lower() == "spawn":
+			var idle_clip: String = resolve_animation("idle")
+			if not idle_clip.is_empty() and idle_clip != resolved_clip:
+				cached_anim_player.queue(idle_clip)
+	else:
+		# If no skeletal animation resolved (e.g. single-clip model in idle/eat), stop playback and freeze
+		if cached_anim_player.is_playing():
+			cached_anim_player.seek(0.0, true)
+			cached_anim_player.stop()
 
 func _update_collision_shape_radius(radius: float) -> void:
 	if collision_shape == null:

@@ -6,6 +6,7 @@ extends Node3D
 
 const SpeciesBlueprintScript = preload("res://scripts/resources/SpeciesBlueprint.gd")
 const MonsterInstanceScript = preload("res://scripts/resources/MonsterInstance.gd")
+const EventBusScript = preload("res://scripts/core/EventBus.gd")
 
 @onready var pen: Pen3D = $Pen3D
 @onready var monster_entity: MonsterEntity = $MonsterEntity
@@ -26,8 +27,7 @@ func _setup_test_creature() -> void:
 	species.base_def = 10
 	species.base_speed = 12
 	species.base_max_hp = 100
-	species.base_valuation = 350
-	species.model_path = "res://assets/models/Free Burrow Cute Series/FBX/Burrow.FBX"
+	species.model_path = "res://assets/models/Free Burrow Cute Series/FBX/Burrow@Walk Forward In Place.FBX"
 
 	# Create runtime monster data
 	var monster_data: MonsterInstance = MonsterInstanceScript.new()
@@ -45,7 +45,7 @@ func _setup_test_creature() -> void:
 		pen.assign_monster(monster_data)
 		monster_entity.pen_reference = pen
 		# Position monster at center of pen
-		var pen_center: Vector3 = pen.get_pen_world_bounds().get_center()
+		var pen_center: Vector3 = pen.get_center() if pen.has_method("get_center") else pen.get_pen_world_bounds().get_center()
 		pen_center.y = 0.0
 		monster_entity.global_position = pen_center
 
@@ -56,7 +56,10 @@ func _setup_test_creature() -> void:
 	call_deferred("_select_initial_monster", monster_data)
 
 func _select_initial_monster(monster: MonsterInstance) -> void:
-	if EventBus != null and EventBus.has_signal("monster_selected"):
-		EventBus.monster_selected.emit(monster)
-	elif EventBus.instance != null and EventBus.instance.has_signal("monster_selected"):
-		EventBus.instance.monster_selected.emit(monster)
+	var bus: Node = null
+	if is_instance_valid(EventBusScript.instance):
+		bus = EventBusScript.instance
+	elif is_inside_tree() and has_node("/root/EventBus"):
+		bus = get_node("/root/EventBus")
+	if bus != null and bus.has_signal("monster_selected"):
+		bus.monster_selected.emit(monster)
