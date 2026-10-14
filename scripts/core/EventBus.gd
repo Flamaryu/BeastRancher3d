@@ -10,7 +10,7 @@ signal tick_speed_changed(multiplier: float)
 
 # --- Monster & Husbandry Signals ---
 signal beast_fed(beast_id: String, crop_id: String)
-signal beast_evolved(beast_id: String, new_species_id: String)
+signal beast_evolved(beast_id: String, form_or_species_id: Variant, color_variant_index: int)
 signal beast_appraised(beast_id: String, calculated_value: int)
 
 # --- Mobile Interaction & Selection Signals ---

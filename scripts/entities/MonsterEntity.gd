@@ -6,6 +6,7 @@ extends CharacterBody3D
 
 const EventBusScript = preload("res://scripts/core/EventBus.gd")
 const TimeManagerScript = preload("res://scripts/core/TimeManager.gd")
+const MonsterVisualController = preload("res://scripts/entities/MonsterVisualController.gd")
 
 enum State {
 	IDLE,
@@ -57,6 +58,7 @@ var state_timer: float = 0.0
 var wander_target: Vector3 = Vector3.ZERO
 var eating_duration: float = 2.0
 var cached_anim_player: AnimationPlayer = null
+var visual_controller: MonsterVisualController = null
 
 # Procedural fallback tween for animations
 var procedural_tween: Tween = null
@@ -113,6 +115,16 @@ func _ensure_components() -> void:
 	_tap_area.collision_mask = 0
 	_tap_area.set_meta("monster_entity", self)
 
+	# Ensure MonsterVisualController
+	if visual_controller == null:
+		visual_controller = get_node_or_null("MonsterVisualController")
+	if visual_controller == null:
+		visual_controller = MonsterVisualController.new()
+		visual_controller.name = "MonsterVisualController"
+		visual_controller.mesh_anchor = _model_container
+		visual_controller.collision_shape = _collision_shape
+		add_child(visual_controller)
+
 func _connect_event_bus() -> void:
 	var bus: Node = _get_event_bus()
 	if bus == null:
@@ -120,6 +132,9 @@ func _connect_event_bus() -> void:
 
 	if bus.has_signal("beast_fed") and not bus.beast_fed.is_connected(_on_beast_fed_event):
 		bus.beast_fed.connect(_on_beast_fed_event)
+
+	if bus.has_signal("beast_evolved") and not bus.beast_evolved.is_connected(_on_beast_evolved_event):
+		bus.beast_evolved.connect(_on_beast_evolved_event)
 
 	if bus.has_signal("hour_ticked") and not bus.hour_ticked.is_connected(_on_hour_ticked):
 		bus.hour_ticked.connect(_on_hour_ticked)
@@ -133,8 +148,13 @@ func _apply_monster_data() -> void:
 
 	_ensure_components()
 
-	# Load species 3D model if provided
-	if monster_data.current_species != null and not monster_data.current_species.model_path.is_empty():
+	# Setup Phase 3 visuals if species_data is present
+	if monster_data.species_data != null:
+		if visual_controller != null:
+			visual_controller.setup_visuals(monster_data.species_data, monster_data.current_form_index, monster_data.color_variant_index)
+			cached_anim_player = visual_controller.cached_anim_player
+	# Fallback to Phase 1/2 species model path
+	elif monster_data.current_species != null and not monster_data.current_species.model_path.is_empty():
 		_load_species_model(monster_data.current_species.model_path)
 
 ## Instances a species model into ModelContainer and discovers its AnimationPlayer.
@@ -280,8 +300,18 @@ func _on_day_ticked(_day: int) -> void:
 	if monster_data != null:
 		monster_data.process_daily_tick()
 
+func _on_beast_evolved_event(p_beast_id: String, _form_or_spec: Variant, _variant: int = 0) -> void:
+	if monster_data != null and monster_data.beast_id == p_beast_id:
+		if monster_data.species_data != null and visual_controller != null:
+			visual_controller.setup_visuals(monster_data.species_data, monster_data.current_form_index, monster_data.color_variant_index)
+			cached_anim_player = visual_controller.cached_anim_player
+
 ## Safely plays an animation by name or falls back to procedural squash-and-stretch.
 func play_animation(anim_name: String) -> void:
+	if monster_data != null and monster_data.species_data != null and visual_controller != null:
+		visual_controller.play_smart_animation(anim_name)
+		return
+
 	var anim_player: AnimationPlayer = _get_or_find_anim_player()
 	var played: bool = false
 

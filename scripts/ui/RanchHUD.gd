@@ -163,7 +163,7 @@ func _on_beast_fed(beast_id: String, _crop_id: String) -> void:
 	if selected_monster != null and selected_monster.beast_id == beast_id:
 		_update_hud_display(true)
 
-func _on_beast_evolved(beast_id: String, _new_species_id: String) -> void:
+func _on_beast_evolved(beast_id: String, _new_species_id: Variant = null, _variant: int = 0) -> void:
 	if selected_monster != null and selected_monster.beast_id == beast_id:
 		_update_hud_display(true)
 

@@ -66,9 +66,9 @@ func _setup_core_systems() -> void:
 		print("  [SIGNAL] EventBus: beast_fed -> Beast '%s' fed with '%s'" % [beast_id, crop_id])
 	)
 
-	event_bus.beast_evolved.connect(func(beast_id: String, new_species_id: String):
-		evolved_events.append({"beast_id": beast_id, "new_species_id": new_species_id})
-		print("  [SIGNAL] EventBus: beast_evolved -> Beast '%s' evolved into '%s'!" % [beast_id, new_species_id])
+	event_bus.beast_evolved.connect(func(beast_id: String, new_species_id: Variant, _variant: int = 0):
+		evolved_events.append({"beast_id": beast_id, "new_species_id": str(new_species_id)})
+		print("  [SIGNAL] EventBus: beast_evolved -> Beast '%s' evolved into '%s'!" % [beast_id, str(new_species_id)])
 	)
 
 	print("  ✓ EventBus, TimeManager, and GridManager mounted & connected.\n")

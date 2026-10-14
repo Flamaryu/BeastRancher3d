@@ -2,9 +2,11 @@ class_name MonsterInstance
 extends Resource
 
 ## Runtime state representing an individual monster.
-## Tracks husbandry state, lineage/genetics, combat stats, economic valuation, and evolution growth.
+## Tracks husbandry state, lineage/genetics, combat stats, economic valuation,
+## and variable-form evolution progression across 2 or 3 forms.
 
 const EventBusScript = preload("res://scripts/core/EventBus.gd")
+const SpeciesData = preload("res://scripts/resources/SpeciesData.gd")
 
 @export_group("Identification")
 @export var beast_id: String = ""
@@ -13,6 +15,19 @@ const EventBusScript = preload("res://scripts/core/EventBus.gd")
 @export var current_species: SpeciesBlueprint = null
 @export var stage: String = "juvenile" # "juvenile", "adult", "elder"
 @export var age_days: int = 0
+
+@export_group("Phase 3 Variable Forms & Variants")
+@export var species_data: SpeciesData = null
+@export var current_form_index: int = 0
+@export var color_variant_index: int = 0
+@export var appraisal_value: int = 0
+
+## Alias for age_days to support requirements referring to days_old.
+var days_old: int:
+	get:
+		return age_days
+	set(value):
+		age_days = value
 
 @export_group("Husbandry")
 @export_range(0, 100) var temperament: int = 80
@@ -35,10 +50,13 @@ const EventBusScript = preload("res://scripts/core/EventBus.gd")
 @export_group("Certification")
 @export var certification_grade: String = "Standard" # "None", "Standard", "Elite", "Master"
 
-## Initializes the monster from a species blueprint.
+## Initializes the monster from a species blueprint (Phase 1/2 legacy).
 func initialize(species: SpeciesBlueprint, p_beast_id: String = "", p_nickname: String = "") -> void:
 	base_species = species
 	current_species = species
+	species_data = null
+	current_form_index = 0
+	color_variant_index = 0
 	beast_id = p_beast_id if not p_beast_id.is_empty() else str("beast_", randi() % 99999)
 	nickname = p_nickname if not p_nickname.is_empty() else (species.species_name if species != null else "Unnamed Beast")
 	stage = "juvenile"
@@ -49,15 +67,41 @@ func initialize(species: SpeciesBlueprint, p_beast_id: String = "", p_nickname: 
 		current_def = species.base_def
 		current_speed = species.base_speed
 		current_max_hp = species.base_max_hp
+	appraisal_value = calculate_appraisal_value()
+
+## Initializes the monster from a Phase 3 SpeciesData resource.
+func initialize_species_data(species: SpeciesData, p_beast_id: String = "", p_nickname: String = "") -> void:
+	species_data = species
+	base_species = null
+	current_species = null
+	current_form_index = 0
+	color_variant_index = 0
+	beast_id = p_beast_id if not p_beast_id.is_empty() else str("beast_", randi() % 99999)
+	nickname = p_nickname if not p_nickname.is_empty() else (species.display_name if species != null else "Unnamed Beast")
+	stage = "juvenile"
+	age_days = 0
+	current_atk = 10
+	current_def = 10
+	current_speed = 10
+	current_max_hp = 100
+	if species != null:
+		appraisal_value = int(round(float(species.base_value) * species.get_form_multiplier(0)))
+	else:
+		appraisal_value = 0
 
 ## Calculates economic market valuation reflecting species tier, pedigree, husbandry, traits, and certification.
 func calculate_appraisal_value() -> int:
+	if species_data != null:
+		var mult: float = species_data.get_form_multiplier(current_form_index)
+		appraisal_value = int(round(float(species_data.base_value) * mult))
+		return appraisal_value
+
 	if current_species == null:
 		return 0
 
 	# 1. Base Species Tier Value
 	var tier_multiplier: float = 1.0 + float(maxi(1, current_species.tier) - 1) * 0.75
-	var base_value: float = float(current_species.base_valuation) * tier_multiplier
+	var base_val: float = float(current_species.base_valuation) * tier_multiplier
 
 	# 2. Pedigree Rank Multiplier (F to S)
 	var pedigree_mult: float = 1.0
@@ -100,8 +144,9 @@ func calculate_appraisal_value() -> int:
 	# 8. Gene Slot Bonuses (e.g., active hereditary traits)
 	var gene_bonus: float = float(gene_slots.size()) * 75.0
 
-	var final_value: float = (base_value * pedigree_mult * purity_factor * husbandry_mult * stage_mult * cert_mult) + stat_bonus + gene_bonus
-	return maxi(1, int(round(final_value)))
+	var final_value: float = (base_val * pedigree_mult * purity_factor * husbandry_mult * stage_mult * cert_mult) + stat_bonus + gene_bonus
+	appraisal_value = maxi(1, int(round(final_value)))
+	return appraisal_value
 
 ## Feeds a crop to the monster, updating satiety, applying nutritional stat modifiers, and adding catalytic points.
 func feed(crop: CropData) -> void:
@@ -128,7 +173,10 @@ func feed(crop: CropData) -> void:
 
 	# Check for evolution opportunity
 	if check_evolution_eligibility():
-		evolve()
+		if species_data != null:
+			evolve_to_next_form()
+		else:
+			evolve()
 
 ## Processes daily tick: decays satiety/hygiene, adjusts temperament, and checks evolution eligibility.
 func process_daily_tick() -> void:
@@ -156,10 +204,48 @@ func process_daily_tick() -> void:
 
 	# Check for evolution opportunity
 	if check_evolution_eligibility():
-		evolve()
+		if species_data != null:
+			evolve_to_next_form()
+		else:
+			evolve()
 
-## Evaluates whether the beast meets all criteria for evolution into its target species.
+## Evaluates whether the beast meets all criteria for evolution into its next form or species.
 func check_evolution_eligibility() -> bool:
+	if species_data != null:
+		# Check if already at maximum form for this species (e.g. index 1 for 2 forms or index 2 for 3 forms)
+		if current_form_index >= species_data.get_max_form_index():
+			return false
+
+		var target_idx: int = current_form_index + 1
+		var req: Dictionary = species_data.get_evolution_requirement(target_idx)
+		if not req.is_empty():
+			var min_days: int = req.get("min_days", req.get("min_evolution_days", 0))
+			if days_old < min_days:
+				return false
+
+			var min_diet: int = req.get("min_diet_count", 0)
+			if diet_history.size() < min_diet:
+				return false
+
+			var req_cat: Dictionary = req.get("required_catalytic", req.get("required_diet_points", {}))
+			for cat_key in req_cat.keys():
+				var req_pts: int = int(req_cat[cat_key])
+				var cur_pts: int = int(catalytic_points.get(cat_key, 0))
+				if cur_pts < req_pts:
+					return false
+
+			var req_crops: Array = req.get("required_crops", req.get("required_diet_crops", []))
+			for c in req_crops:
+				if not diet_history.has(str(c)):
+					return false
+		else:
+			# Default progression requirements if no explicit dictionary is provided
+			var def_days: int = 3 if target_idx == 1 else 6
+			if days_old < def_days:
+				return false
+
+		return true
+
 	if current_species == null:
 		return false
 
@@ -193,7 +279,40 @@ func check_evolution_eligibility() -> bool:
 
 	return true
 
-## Executes the evolution transformation to the target species blueprint.
+## Executes Phase 3 variable-form evolution progression to current_form_index + 1.
+func evolve_to_next_form() -> bool:
+	if species_data == null:
+		return false
+	if current_form_index >= species_data.get_max_form_index():
+		return false
+
+	current_form_index += 1
+
+	# Evaluate color variant unlocked by diet & catalytic points
+	_evaluate_color_variant_unlock()
+
+	# Update life stage
+	if current_form_index >= species_data.get_max_form_index():
+		stage = "elder"
+	else:
+		stage = "adult"
+
+	# Apply stat scaling per evolution form
+	current_atk = int(round(float(current_atk) * 1.3))
+	current_def = int(round(float(current_def) * 1.3))
+	current_speed = int(round(float(current_speed) * 1.2))
+	current_max_hp = int(round(float(current_max_hp) * 1.4))
+	temperament = clampi(temperament + 15, 0, 100)
+
+	# Update appraisal value using form multiplier
+	var mult: float = species_data.get_form_multiplier(current_form_index)
+	appraisal_value = int(round(float(species_data.base_value) * mult))
+
+	# Notify via EventBus
+	_notify_beast_evolved_form(current_form_index, color_variant_index)
+	return true
+
+## Executes the Phase 1/2 evolution transformation to the target species blueprint.
 func evolve(target_species: SpeciesBlueprint = null) -> bool:
 	var new_species: SpeciesBlueprint = target_species
 	if new_species == null and current_species != null:
@@ -224,15 +343,51 @@ func evolve(target_species: SpeciesBlueprint = null) -> bool:
 	_notify_beast_evolved(new_species.species_id)
 	return true
 
+func _evaluate_color_variant_unlock() -> void:
+	# Index 0: Standard, Index 1: Elemental Shift, Index 2: Rare Mutation
+	var mut_thresh: int = 15
+	var elem_thresh: int = 10
+	if species_data != null and not species_data.variant_thresholds.is_empty():
+		var mut_cfg: Dictionary = species_data.variant_thresholds.get(2, species_data.variant_thresholds.get("2", {}))
+		if not mut_cfg.is_empty():
+			mut_thresh = int(mut_cfg.values()[0])
+		var elem_cfg: Dictionary = species_data.variant_thresholds.get(1, species_data.variant_thresholds.get("1", {}))
+		if not elem_cfg.is_empty():
+			elem_thresh = int(elem_cfg.values()[0])
+
+	var mutation_pts: int = int(catalytic_points.get("mutation", 0)) + int(catalytic_points.get("cosmic", 0)) + int(catalytic_points.get("aberrant", 0))
+	for diet_item in diet_history:
+		var l_diet: String = diet_item.to_lower()
+		if "mutation" in l_diet or "cosmic" in l_diet:
+			mutation_pts += 10
+
+	var elemental_pts: int = int(catalytic_points.get("fire", 0)) + int(catalytic_points.get("sun", 0)) + int(catalytic_points.get("water", 0)) + int(catalytic_points.get("earth", 0)) + int(catalytic_points.get("elemental", 0))
+	for diet_item in diet_history:
+		var l_diet: String = diet_item.to_lower()
+		if "elemental" in l_diet or "sun" in l_diet or "fire" in l_diet or "water" in l_diet or "earth" in l_diet:
+			elemental_pts += 5
+
+	if mutation_pts >= mut_thresh:
+		color_variant_index = 2
+	elif elemental_pts >= elem_thresh:
+		color_variant_index = maxi(color_variant_index, 1)
+	else:
+		color_variant_index = maxi(color_variant_index, 0)
+
 func _notify_beast_fed(crop_id: String) -> void:
 	var bus: Node = _get_event_bus()
 	if bus != null and bus.has_signal("beast_fed"):
 		bus.beast_fed.emit(beast_id, crop_id)
 
+func _notify_beast_evolved_form(form_idx: int, variant_idx: int) -> void:
+	var bus: Node = _get_event_bus()
+	if bus != null and bus.has_signal("beast_evolved"):
+		bus.beast_evolved.emit(beast_id, form_idx, variant_idx)
+
 func _notify_beast_evolved(new_species_id: String) -> void:
 	var bus: Node = _get_event_bus()
 	if bus != null and bus.has_signal("beast_evolved"):
-		bus.beast_evolved.emit(beast_id, new_species_id)
+		bus.beast_evolved.emit(beast_id, new_species_id, 0)
 
 func _get_event_bus() -> Node:
 	if is_instance_valid(EventBusScript.instance):
